@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
@@ -25,14 +25,30 @@ async function run() {
     const porductCollection = client.db("emajon").collection("products");
 
     app.get("/products", async (req, res) => {
-      const page = req.query.page;
-      const size = req.query.size;
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       console.log(page, size);
       const query = {};
       const coursor = porductCollection.find(query);
-      const products = await coursor.toArray();
+      const products = await coursor
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       const count = await porductCollection.estimatedDocumentCount();
       res.send({ count, products });
+    });
+
+    app.get("/productsByIds", async (req, res) => {
+      const ids = req.body;
+      const objectIds = ids.map((id) => ObjectId(id));
+      const query = {
+        _id: {
+          $in: objectIds,
+        },
+      };
+      const coursor = porductCollection.find(query);
+      const products = await coursor.toArray();
+      res.send(products);
     });
   } finally {
   }
